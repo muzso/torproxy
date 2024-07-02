@@ -10,13 +10,14 @@
 #  REQUIREMENTS: running tor docker container
 #          BUGS: ---
 #         NOTES: ---
-#        AUTHOR: David Personette (dperson@gmail.com),
+#       AUTHORS: David Personette (dperson@gmail.com), Zsolt Müller (zsolt.muller@gmail.com)
 #  ORGANIZATION:
-#       CREATED: 2015-07-06 05:59
-#      REVISION: 0.1
+#       CREATED: 2024-07-02 23:51
+#      REVISION: 0.2
 #===============================================================================
 
-set -euo pipefail                           # Treat unset variables as an error
+# Treat unset variables as an error
+set -o errexit -o nounset -o pipefail
 
 # Most of this is from
 # https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy
@@ -26,10 +27,10 @@ set -euo pipefail                           # Treat unset variables as an error
 _non_tor="192.168.1.0/24 192.168.0.0/24"
 
 ### get the container tor runs in
-_tor_container="$(docker ps | awk '/torproxy/ {print $NF; quit}')"
+_tor_container="$(docker ps | awk "/torproxy/ {print \$NF; quit}")"
 if [[ "$_tor_container" == "" ]]; then
-    echo 'ERROR: you must start a tor proxy container first, IE:'
-    echo '    docker run -d --net host --restart always dperson/torproxy'
+    echo "ERROR: you must start a tor proxy container first, IE:"
+    echo "    docker run -d --net host --restart always muzso/torproxy"
     exit 1
 fi
 

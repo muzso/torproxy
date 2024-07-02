@@ -10,40 +10,44 @@
 #  REQUIREMENTS: ---
 #          BUGS: ---
 #         NOTES: ---
-#        AUTHOR: David Personette (dperson@gmail.com),
+#       AUTHORS: David Personette (dperson@gmail.com), Zsolt Müller (zsolt.muller@gmail.com)
 #  ORGANIZATION:
-#       CREATED: 09/28/2014 12:11
-#      REVISION: 1.0
+#       CREATED: 2024-07-02 23:51
+#      REVISION: 1.1
 #===============================================================================
 
-set -o nounset                              # Treat unset variables as an error
+# Treat unset variables as an error
+set -o nounset
 
 ### bandwidth: set the BW available for relaying
 # Arguments:
 #   KiB/s) KiB/s of data that can be relayed
 # Return: Updated configuration file
-bandwidth() { local kbs="${1:-10}" file=/etc/tor/torrc
-    sed -i '/^RelayBandwidth/d' $file
-    echo "RelayBandwidthRate $kbs KB" >>$file
-    echo "RelayBandwidthBurst $(( kbs * 2 )) KB" >>$file
+bandwidth() {
+    local kbs="${1:-10}" file="/etc/tor/torrc"
+    sed -i "/^RelayBandwidth/d" "$file"
+    echo "RelayBandwidthRate $kbs KB" >> "$file"
+    echo "RelayBandwidthBurst $(( kbs * 2 )) KB" >> "$file"
 }
 
 ### exitnode: Allow exit traffic
 # Arguments:
 #   N/A)
 # Return: Updated configuration file
-exitnode() { local file=/etc/tor/torrc
-    sed -i '/^ExitPolicy/d' $file
+exitnode() {
+    local file="/etc/tor/torrc"
+    sed -i "/^ExitPolicy/d" "$file"
 }
 
 ### exitnode_country: Only allow traffic to exit in a specified country
 # Arguments:
 #   country) country where we want to exit
 # Return: Updated configuration file
-exitnode_country() { local country="$1" file=/etc/tor/torrc
-    sed -i '/^StrictNodes/d; /^ExitNodes/d' $file
-    echo "StrictNodes 1" >>$file
-    echo "ExitNodes {$country}" >>$file
+exitnode_country() {
+    local country="$1" file="/etc/tor/torrc"
+    sed -i "/^StrictNodes/d; /^ExitNodes/d" "$file"
+    echo "StrictNodes 1" >> "$file"
+    echo "ExitNodes {$country}" >> "$file"
 }
 
 ### hidden_service: setup a hidden service
@@ -51,71 +55,70 @@ exitnode_country() { local country="$1" file=/etc/tor/torrc
 #   port) port to connect to service
 #   host) host:port where service is running
 # Return: Updated configuration file
-hidden_service() { local port="$1" host="$2" file=/etc/tor/torrc
-    sed -i '/^HiddenServicePort '"$port"' /d' $file
-    grep -q '^HiddenServiceDir' $file ||
-        echo "HiddenServiceDir /var/lib/tor/hidden_service" >>$file
-    echo "HiddenServicePort $port $host" >>$file
+hidden_service() {
+    local port="$1" host="$2" file="/etc/tor/torrc"
+    sed -i "/^HiddenServicePort '"$port"' /d" "$file"
+    grep -q "^HiddenServiceDir" "$file" ||
+        echo "HiddenServiceDir /var/lib/tor/hidden_service" >> "$file"
+    echo "HiddenServicePort $port $host" >> "$file"
 }
 
 ### newnym: setup new circuits
 # Arguments:
 #   N/A)
 # Return: New circuits for tor connections
-newnym() { local file=/etc/tor/run/control.authcookie
-    echo -e 'AUTHENTICATE "'"$(cat $file)"'"\nSIGNAL NEWNYM\nQUIT' |
-                nc 127.0.0.1 9051
-    if ps -ef | egrep -v 'grep|torproxy.sh' | grep -q tor; then exit 0; fi
+newnym() {
+    local file="/etc/tor/run/control.authcookie"
+    echo -e "AUTHENTICATE \"$(cat $file)\\nSIGNAL NEWNYM\\nQUIT" | nc 127.0.0.1 9051
+    if ps -ef | egrep -v "grep|torproxy\\.sh" | grep -q "tor"; then exit 0; fi
 }
 
 ### password: setup a hashed password
 # Arguments:
 #   passwd) passwd to set
 # Return: Updated configuration file
-password() { local passwd="$1" file=/etc/tor/torrc
-    sed -i '/^HashedControlPassword/d' $file
-    sed -i '/^ControlPort/s/ 9051/ 0.0.0.0:9051/' $file
-    echo "HashedControlPassword $(su - tor -s/bin/bash -c \
-                "tor --hash-password '$passwd' |tail -n 1")" >>$file 2>/dev/null
+password() {
+    local passwd="$1" file="/etc/tor/torrc"
+    sed -i "/^HashedControlPassword/d" "$file"
+    sed -i "/^ControlPort/s/ 9051/ 0.0.0.0:9051/" "$file"
+    echo "HashedControlPassword $(su - tor -s /bin/bash -c \
+                "tor --hash-password \"$passwd\" | tail -n 1")" >> "$file" 2> /dev/null
 }
 
 check() {
-  set -e
+    set -o errexit
 
-  curl -sS --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip | jq .IsTor | fgrep -q -x true || exit 10
+    /usr/bin/ishealthy.sh
 
-  env HTTP_PROXY=http://127.0.0.1:8118/ HTTPS_PROXY=http://127.0.0.1:8118/ \
-    curl -sS https://check.torproject.org/api/ip | jq .IsTor | fgrep -q -x true || exit 10
-
-  echo OK
-
-  exit 0
+    exit 0
 }
 
 ### usage: Help
 # Arguments:
 #   none)
 # Return: Help text
-usage() { local RC="${1:-0}"
-    echo "Usage: ${0##*/} [-opt] [command]
+usage() {
+    local RC="${1:-0}"
+    cat << EOH >&2
+Usage: ${0##*/} [-opt] [command]
 Options (fields in '[]' are optional, '<>' are required):
     -h          This help
-    -b \"\"       Configure tor relaying bandwidth in KB/s
-                possible arg: \"[number]\" - # of KB/s to allow
+    -b ""       Configure tor relaying bandwidth in KB/s
+                possible arg: "[number]" - # of KB/s to allow
     -c          Check health of tor and proxy
     -e          Allow this to be an exit node for tor traffic
-    -l \"<country>\" Configure tor to only use exit nodes in specified country
-                required args: \"<country>\" (IE, "US" or "DE")
+    -l "<country>" Configure tor to only use exit nodes in specified country
+                required args: "<country>" (IE, "US" or "DE")
                 <country> - country traffic should exit in
     -n          Generate new circuits now
-    -p \"<password>\" Configure tor HashedControlPassword for control port
-    -s \"<port>;<host:port>\" Configure tor hidden service
-                required args: \"<port>;<host:port>\"
+    -p "<password>" Configure tor HashedControlPassword for control port
+    -s "<port>;<host:port>" Configure tor hidden service
+                required args: "<port>;<host:port>"
                 <port> - port for .onion service to listen on
                 <host:port> - destination for service request
 
 The 'command' (if provided and valid) will be run instead of torproxy
-" >&2
+EOH
     exit $RC
 }
 
@@ -156,7 +159,7 @@ for env in $(printenv | grep '^TOR_'); do
 done
 
 chown -Rh tor. /etc/tor /var/lib/tor /var/log/tor 2>&1 |
-            grep -iv 'Read-only' || :
+    grep -iv 'Read-only' || :
 
 if [[ $# -ge 1 && -x $(which $1 2>&-) ]]; then
     exec "$@"

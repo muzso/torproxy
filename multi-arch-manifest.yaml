@@ -1,15 +1,15 @@
-image: dperson/torproxy:latest
+image: muzso/torproxy:latest
 manifests:
-  - image: dperson/torproxy:amd64
+  - image: muzso/torproxy:amd64
     platform:
       architecture: amd64
       os: linux
-  - image: dperson/torproxy:aarch64
+  - image: muzso/torproxy:aarch64
     platform:
       architecture: arm64
       os: linux
       variant: v8
-  - image: dperson/torproxy:armhf
+  - image: muzso/torproxy:armhf
     platform:
       architecture: arm
       os: linux

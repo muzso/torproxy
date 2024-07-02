@@ -1,11 +1,10 @@
 #!/bin/bash
 
-set -eu
+set -o errexit -o nounset
 
-curl -sS --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip | jq .IsTor | fgrep -q -x true
-
-export HTTP_PROXY=http://127.0.0.1:8118/ HTTPS_PROXY=http://127.0.0.1:8118/
-
-curl -sS https://check.torproject.org/api/ip | jq .IsTor | fgrep -q -x true
+for proxy_url in "socks5h://127.0.0.1:9050" "http://127.0.0.1:8118"; do
+    curl -sS --proxy "$proxy_url" "https://check.torproject.org/api/ip" | jq -r ".IsTor" | fgrep -q -x "true"
+done
 
 echo OK
+exit 0
