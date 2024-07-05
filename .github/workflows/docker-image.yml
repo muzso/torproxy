@@ -18,7 +18,7 @@ jobs:
             # don't generate `latest` by default
             latest=false
           images: |
-            muzso/torproxy
+            $GITHUB_REPOSITORY
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
