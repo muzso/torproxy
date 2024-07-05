@@ -14,13 +14,17 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
+          flavor: |
+            # don't generate `latest` by default
+            latest=false
           images: |
             muzso/torproxy
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+            # manual rule for generating `latest` for the default branch
+            type=raw,value=latest,enable={{is_default_branch}}
             type=sha
       
       - name: Set up QEMU
