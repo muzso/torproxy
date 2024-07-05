@@ -2,11 +2,27 @@ name: Docker Image CI
 
 on:
   push:
-
+    branches:
+      - "master"
+    tags:
+      - "*.*.*"
 jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            muzso/torproxy
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       
@@ -24,4 +40,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: muzso/torproxy:latest
+          tags: ${{ steps.meta.outputs.tags }}
