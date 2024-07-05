@@ -25,7 +25,6 @@ jobs:
             type=semver,pattern={{major}}
             # manual rule for generating `latest` for the default branch
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
