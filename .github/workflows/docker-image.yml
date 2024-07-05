@@ -1,5 +1,6 @@
 name: Docker Image CI
 
+# triggers on push to master branch and push of tags
 on:
   push:
     branches:
@@ -15,17 +16,19 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           flavor: |
-            # don't generate `latest` by default
+            # don't generate `latest` tag by default
             latest=false
           images: |
+            # we assume that the dockerhub image (user+repo) shares the same name as the GH user+repo         
             ${{github.repository}}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # manual rule for generating `latest` for the default branch
+            # manual rule for generating `latest` tag for the default branch
             type=raw,value=latest,enable={{is_default_branch}}
       
+      # for cross-compilation of multi-platform images
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       
